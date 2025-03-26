@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field
 from templates.jd_template import JD_TEMPLATE, format_list_items, format_tech_tools
 from config.settings import OPENAI_API_KEY, GEMINI_API_KEY, LLM_PROVIDER, LLM_MODEL, LLM_TEMPERATURE
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -51,27 +52,16 @@ class JDGenerator:
             raise
     
     def _init_gemini(self):
-        """Initialize Gemini client"""
+        """Initialize modified Gemini client that uses OpenRouter"""
         try:
-            import google.generativeai as genai
-            genai.configure(api_key=GEMINI_API_KEY)
-            self.client = genai
-            
-            # Initialize the model
-            generation_config = {
-                "temperature": self.temperature,
-                "top_p": 0.8,
-                "top_k": 40,
-                "max_output_tokens": 2048,
-            }
-            
-            self.gemini_model = self.client.GenerativeModel(
-                model_name=self.model,
-                generation_config=generation_config
+            import openai  # Use OpenAI client for OpenRouter
+            self.client = openai.OpenAI(
+                api_key=os.getenv("OPENROUTER_API_KEY"),
+                base_url="https://openrouter.ai/api/v1"
             )
-            logger.info("Gemini client initialized successfully")
+            logger.info("OpenRouter client for Gemini initialized successfully")
         except Exception as e:
-            logger.error(f"Failed to initialize Gemini client: {e}")
+            logger.error(f"Failed to initialize OpenRouter client: {e}")
             raise
     
     def _get_completion(self, prompt: str) -> str:
@@ -101,18 +91,23 @@ class JDGenerator:
             raise
     
     def _get_gemini_completion(self, prompt: str) -> str:
-        """Get completion from Gemini API"""
+        """Get completion from OpenRouter API using Gemini model"""
         try:
-            response = self.gemini_model.generate_content(prompt)
+            # Add OpenRouter headers
+            extra_headers = {
+                "HTTP-Referer": "https://your-app-domain.com",  # Your app's URL
+                "X-Title": "Job Description Generator"  # Your app's name
+            }
             
-            # Handle potential blocking
-            if response.candidates and response.candidates[0].content.parts:
-                return response.candidates[0].content.parts[0].text
-            else:
-                logger.warning("Gemini response was blocked or empty")
-                return "The AI model didn't generate a response for this prompt. Please try different wording."
+            response = self.client.chat.completions.create(
+                model=self.model,  # Using "google/gemini-2.0-flash-001"
+                messages=[{"role": "user", "content": prompt}],
+                temperature=self.temperature,
+                extra_headers=extra_headers
+            )
+            return response.choices[0].message.content
         except Exception as e:
-            logger.error(f"Gemini API error: {e}")
+            logger.error(f"OpenRouter API error: {e}")
             raise
     
     def generate_jd(self, job_input: JobInput) -> str:

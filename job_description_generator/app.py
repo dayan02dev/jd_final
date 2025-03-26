@@ -116,7 +116,8 @@ def check_llm_credentials(provider):
     if provider == "openai":
         return bool(os.getenv("OPENAI_API_KEY"))
     elif provider == "gemini":
-        return bool(os.getenv("GEMINI_API_KEY"))
+        # Check for either native Gemini API or OpenRouter
+        return bool(os.getenv("GEMINI_API_KEY") or os.getenv("OPENROUTER_API_KEY"))
     return False
 
 def render_job_description(job_description):

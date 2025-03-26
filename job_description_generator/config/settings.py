@@ -7,7 +7,8 @@ load_dotenv()
 # API Keys
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-
+# Add this line after the existing API keys
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 # LLM Provider settings
 LLM_PROVIDER = os.getenv("LLM_PROVIDER", "gemini")  # "openai" or "gemini"
 LLM_MODEL = os.getenv("LLM_MODEL", "gemini-pro")
